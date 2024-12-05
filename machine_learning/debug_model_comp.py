@@ -4,18 +4,21 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from sklearn.ensemble import RandomForestRegressor
 
-# Define the file path
-file_path = 'machine_learning/data/model.xlsx'
+# Define the file paths
+model_file_path = 'machine_learning/data/model.xlsx'
+comparison_file_path = 'machine_learning/data/comparison.xlsx'
 
-# Check if the file exists
-if not os.path.exists(file_path):
-    raise FileNotFoundError(f"The file {file_path} does not exist. Please check the path.")
+# Check if the files exist
+if not os.path.exists(model_file_path):
+    raise FileNotFoundError(f"The file {model_file_path} does not exist. Please check the path.")
+if not os.path.exists(comparison_file_path):
+    raise FileNotFoundError(f"The file {comparison_file_path} does not exist. Please check the path.")
 
-# Load data from Excel workbook using openpyxl
-training_data = pd.read_excel(file_path, sheet_name='training_data', engine='openpyxl')
-validation_data = pd.read_excel(file_path, sheet_name='validation_data', engine='openpyxl')
-testing_data = pd.read_excel(file_path, sheet_name='testing_data', engine='openpyxl')
-comparison_data = pd.read_excel(file_path, sheet_name='comparison_data', engine='openpyxl')
+# Load data from Excel workbooks using openpyxl
+training_data = pd.read_excel(model_file_path, sheet_name='training_data', engine='openpyxl')
+validation_data = pd.read_excel(model_file_path, sheet_name='validation_data', engine='openpyxl')
+testing_data = pd.read_excel(model_file_path, sheet_name='testing_data', engine='openpyxl')
+comparison_data = pd.read_excel(comparison_file_path, sheet_name='comparison_data', engine='openpyxl')
 
 # Commented out logging with log nametag
 # print("[LOG] Training Data Columns:", training_data.columns)
@@ -27,10 +30,6 @@ training_data.columns = training_data.columns.str.strip()
 validation_data.columns = validation_data.columns.str.strip()
 testing_data.columns = testing_data.columns.str.strip()
 comparison_data.columns = comparison_data.columns.str.strip()
-
-# Debugging: Print the initial contents of comparison_data
-print("[DEBUG] Initial Comparison Data:")
-print(comparison_data)
 
 # Combine date and time into a single datetime column
 def preprocess_data(df):
@@ -53,7 +52,7 @@ validation_data = validation_data.dropna(subset=['Actual Total Load'])
 testing_data = testing_data.dropna(subset=['Actual Total Load'])
 comparison_data = comparison_data.dropna(subset=['Actual Total Load'])
 
-# Debugging: Print the contents of comparison_data after preprocessing and dropping NaNs
+# Debugging: Print the contents of comparison_data
 print("[DEBUG] Comparison Data after preprocessing and dropping NaNs:")
 print(comparison_data)
 
@@ -117,9 +116,5 @@ if len(X_comparison) > 0:
 
     # Print comparison data with predictions
     print(comparison_data)
-
-    # Write the comparison data with predictions to a new sheet in the same workbook
-    with pd.ExcelWriter(file_path, engine='openpyxl', mode='a') as writer:
-        comparison_data.to_excel(writer, sheet_name='predictions_comparison')
 else:
     print("[ERROR] No data available for comparison.")
