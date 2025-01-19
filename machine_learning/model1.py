@@ -56,7 +56,7 @@ X_train = scaler.fit_transform(X_train)
 X_val = scaler.transform(X_val)
 X_test = scaler.transform(X_test)
 
-# Build a simpler neural network model
+#neural network model still trying to optimise
 model = Sequential()
 model.add(Input(shape=(X_train.shape[1],)))
 model.add(Dense(128, activation='relu'))
