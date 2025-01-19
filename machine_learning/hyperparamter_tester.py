@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from tensorflow.keras.models import Sequential #type: ignore
-from tensorflow.keras.layers import Dense, Input, Dropout, LeakyReLU, Activation #type: ignore
+from tensorflow.keras.layers import Dense, Input, Dropout #type:ignore
 from tensorflow.keras.optimizers import Adam #type: ignore
 from tensorflow.keras.callbacks import EarlyStopping #type: ignore
 from datetime import datetime, timedelta
@@ -56,26 +56,77 @@ X_train = scaler.fit_transform(X_train)
 X_val = scaler.transform(X_val)
 X_test = scaler.transform(X_test)
 
-# Build a simpler neural network model
+# Define hyperparameter ranges
+neurons = [64, 128, 256, 512]
+dropout_rates = [0.2, 0.3, 0.4, 0.5]
+learning_rates = [0.001, 0.0005, 0.0001, 0.00005]
+batch_sizes = [32, 64, 128]
+
+best_mse = float('inf')
+best_mae = float('inf')
+best_params = {}
+
+# Grid search for hyperparameters
+for neuron in neurons:
+    for dropout_rate in dropout_rates:
+        for learning_rate in learning_rates:
+            for batch_size in batch_sizes:
+                # Build the neural network model
+                model = Sequential()
+                model.add(Input(shape=(X_train.shape[1],)))
+                model.add(Dense(neuron, activation='relu'))
+                model.add(Dropout(dropout_rate))
+                model.add(Dense(neuron // 2, activation='relu'))
+                model.add(Dropout(dropout_rate))
+                model.add(Dense(neuron // 4, activation='relu'))
+                model.add(Dense(1, activation='linear'))
+
+                # Compile the model
+                model.compile(optimizer=Adam(learning_rate=learning_rate), loss='mean_squared_error')
+
+                # Define the EarlyStopping callback
+                early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+
+                # Train the model with the callback
+                model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=100, batch_size=batch_size, callbacks=[early_stopping], verbose=0)
+
+                # Evaluate the model
+                y_pred = model.predict(X_val)
+                mse = mean_squared_error(y_val, y_pred)
+                mae = mean_absolute_error(y_val, y_pred)
+
+                # Check if this is the best model
+                if mse < best_mse:
+                    best_mse = mse
+                    best_mae = mae
+                    best_params = {
+                        'neurons': neuron,
+                        'dropout_rate': dropout_rate,
+                        'learning_rate': learning_rate,
+                        'batch_size': batch_size
+                    }
+
+print(f'Best MSE: {best_mse}')
+print(f'Best MAE: {best_mae}')
+print(f'Best Parameters: {best_params}')
+
+# Build the best model
 model = Sequential()
 model.add(Input(shape=(X_train.shape[1],)))
-model.add(Dense(128, activation='relu'))
-model.add(Dropout(0.3))
-model.add(Dense(64, activation='relu'))
-model.add(Dropout(0.3))
-model.add(Dense(32, activation='relu'))
+model.add(Dense(best_params['neurons'], activation='relu'))
+model.add(Dropout(best_params['dropout_rate']))
+model.add(Dense(best_params['neurons'] // 2, activation='relu'))
+model.add(Dropout(best_params['dropout_rate']))
+model.add(Dense(best_params['neurons'] // 4, activation='relu'))
 model.add(Dense(1, activation='linear'))
 
-# Compile the model with a slightly reduced learning rate
-model.compile(optimizer=Adam(learning_rate=0.0001), loss='mean_squared_error')
+# Compile the best model
+model.compile(optimizer=Adam(learning_rate=best_params['learning_rate']), loss='mean_squared_error')
 
-# Define the EarlyStopping callback
-early_stopping = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True)
+# Train the best model
+model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=100, batch_size=best_params['batch_size'], callbacks=[early_stopping])
 
-# Train the model with the callback
-model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=300, batch_size=64, callbacks=[early_stopping])
-
-# Evaluate the model
+# Evaluate the best model
 loss = model.evaluate(X_test, y_test)
 print(f'Test Loss: {loss}')
 
