@@ -3,10 +3,10 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Input, Dropout
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, Callback
+from tensorflow.keras.models import Sequential # type: ignore
+from tensorflow.keras.layers import Dense, Input, Dropout# type: ignore
+from tensorflow.keras.optimizers import Adam# type: ignore
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, Callback# type: ignore
 from datetime import datetime, timedelta
 
 # Define the folder path containing the Excel files
@@ -61,24 +61,39 @@ for filename in os.listdir(folder_path):
         validation_data.columns = validation_data.columns.str.strip()
         testing_data.columns = testing_data.columns.str.strip()
         
-        # Check for NaN or infinite values
-        print(f"Checking for NaN or infinite values in {filename}...")
-        print(training_data.isna().sum())
-        print(validation_data.isna().sum())
-        print(testing_data.isna().sum())
+        # Keep a copy of the original Date and Time columns for output
+        original_testing_data = testing_data[['Date', 'Time']].copy()
         
-        # Drop rows with NaN or infinite values
-        training_data = training_data.replace([np.inf, -np.inf], np.nan).dropna()
-        validation_data = validation_data.replace([np.inf, -np.inf], np.nan).dropna()
-        testing_data = testing_data.replace([np.inf, -np.inf], np.nan).dropna()
+        # Preprocess the data
+        training_data = preprocess_data(training_data)
+        validation_data = preprocess_data(validation_data)
+        testing_data = preprocess_data(testing_data)
         
-        # Prepare the data
-        X_train = training_data.drop(['Actual Total Load', 'Time', 'Date'], axis=1)
-        y_train = training_data['Actual Total Load']
-        X_val = validation_data.drop(['Actual Total Load', 'Time', 'Date'], axis=1)
-        y_val = validation_data['Actual Total Load']
-        X_test = testing_data.drop(['Actual Total Load', 'Time', 'Date'], axis=1)
-        y_test = testing_data['Actual Total Load']
+        # Check for and handle missing values
+        training_data = training_data.dropna(subset=['Actual Total Load'])
+        validation_data = validation_data.dropna(subset=['Actual Total Load'])
+        testing_data = testing_data.dropna(subset=['Actual Total Load'])
+        
+        # Add additional features
+        training_data = add_features(training_data)
+        validation_data = add_features(validation_data)
+        testing_data = add_features(testing_data)
+        
+        # Replace infinite values with NaNs and drop any remaining NaNs
+        training_data.replace([np.inf, -np.inf], np.nan, inplace=True)
+        validation_data.replace([np.inf, -np.inf], np.nan, inplace=True)
+        testing_data.replace([np.inf, -np.inf], np.nan, inplace=True)
+        training_data.dropna(inplace=True)
+        validation_data.dropna(inplace=True)
+        testing_data.dropna(inplace=True)
+        
+        # Prepare the data for training
+        X_train = training_data[['hour', 'day_of_week', 'month']].values
+        y_train = training_data['Actual Total Load'].values
+        X_val = validation_data[['hour', 'day_of_week', 'month']].values
+        y_val = validation_data['Actual Total Load'].values
+        X_test = testing_data[['hour', 'day_of_week', 'month']].values
+        y_test = testing_data['Actual Total Load'].values
         
         # Scale the data
         scaler = StandardScaler()
@@ -89,22 +104,25 @@ for filename in os.listdir(folder_path):
         # Build the neural network model
         model = Sequential()
         model.add(Input(shape=(X_train.shape[1],)))
+        model.add(Dense(512, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(256, activation='relu'))
+        model.add(Dropout(0.5))
         model.add(Dense(128, activation='relu'))
-        model.add(Dropout(0.3))
+        model.add(Dropout(0.5))
         model.add(Dense(64, activation='relu'))
-        model.add(Dropout(0.3))
-        model.add(Dense(32, activation='relu'))
         model.add(Dense(1, activation='linear'))
         
-        # Compile the model with a slightly reduced learning rate
-        model.compile(optimizer=Adam(learning_rate=0.0001), loss='mean_squared_error')
+        # Compile the model with a slightly higher learning rate
+        model.compile(optimizer=Adam(learning_rate=0.001), loss='mean_squared_error')
         
-        # Define the EarlyStopping callback
+        # Define the EarlyStopping and ReduceLROnPlateau callbacks
         early_stopping = EarlyStopping(monitor='val_loss', patience=20, restore_best_weights=True)
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=10, min_lr=0.00001)
         early_stopping_by_error = EarlyStoppingByError(start_epoch=1800)
         
         # Train the model with the callbacks
-        model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=2000, batch_size=64, callbacks=[early_stopping, early_stopping_by_error])
+        model.fit(X_train, y_train, validation_data=(X_val, y_val), epochs=2000, batch_size=64, callbacks=[early_stopping, reduce_lr, early_stopping_by_error])
         
         # Evaluate the model
         loss = model.evaluate(X_test, y_test)
@@ -120,7 +138,7 @@ for filename in os.listdir(folder_path):
         print(f'Test Mean Absolute Error for {filename}: {mae}')
         
         # Prepare the output DataFrame
-        output_data = testing_data[['Date', 'Time']].copy()
+        output_data = original_testing_data.copy()
         output_data['Predicted Load'] = y_pred
         
         # Ensure Date column is in the correct format
