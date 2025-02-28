@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solar Power Manager</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    .app {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 2em;
+      color: #ff9800;
+    }
+    .header p {
+      margin: 0;
+      color: #666;
+    }
+    section {
+      margin-bottom: 20px;
+    }
+    h2 {
+      font-size: 1.5em;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    select {
+      width: 100%;
+      padding: 10px;
+      font-size: 1em;
+      margin-bottom: 20px;
+    }
+    .power-card, .mode-card {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .icon {
+      width: 50px;
+      height: 50px;
+      background-color: #ff9800;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    .details h3 {
+      margin: 0;
+      font-size: 1.2em;
+      color: #333;
+    }
+    .details p {
+      margin: 0;
+      color: #666;
+    }
+    .horizontal-scroll {
+      display: flex;
+      overflow-x: auto;
+    }
+    .hour-card {
+      flex: 0 0 auto;
+      padding: 10px;
+      margin-right: 10px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .hour-card.peak {
+      background-color: #ff9800;
+      color: #fff;
+    }
+    .slider {
+      display: flex;
+      align-items: center;
+    }
+    .slider p {
+      margin: 0;
+      margin-right: 10px;
+    }
+    .btn {
+      padding: 10px 20px;
+      font-size: 1em;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .btn.solar {
+      background-color: #ff9800;
+      color: #fff;
+    }
+    .btn.grid {
+      background-color: #4caf50;
+      color: #fff;
+    }
+    .notifications ul {
+      list-style: none;
+      padding: 0;
+    }
+    .notifications li {
+      padding: 10px;
+      background-color: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Header Section -->
+    <header class="header">
+      <h1>☀️ Solar Power Manager</h1>
+      <p>Efficient energy control at your fingertips.</p>
+    </header>
+
+    <!-- Country Selection -->
+    <section class="country-selection">
+      <h2>Select Country</h2>
+      <select id="country-select" onchange="loadData()">
+        <option value="your-country">Your Country</option>
+        <option value="country1">Country 1</option>
+        <option value="country2">Country 2</option>
+        <!-- Add more options as needed -->
+      </select>
+    </section>
+
+    <!-- Current Power Source -->
+    <section class="current-power">
+      <h2>Current Power Source</h2>
+      <div class="power-card">
+        <div class="icon solar"></div>
+        <div class="details">
+          <h3>Solar Mode Active</h3>
+          <p>Since 10:00 AM</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Predicted Peak Hours -->
+    <section class="peak-hours">
+      <h2>Predicted Peak Load Hours</h2>
+      <div class="horizontal-scroll" id="peak-hours">
+        <!-- Peak hours will be dynamically inserted here -->
+      </div>
+    </section>
+
+    <!-- Solar Power Hours -->
+    <section class="solar-hours">
+      <h2>Solar Power Availability</h2>
+      <div class="slider">
+        <p>Available from <strong>8 AM</strong> to <strong>4 PM</strong>.</p>
+        <input type="range" min="6" max="18" value="12" disabled>
+      </div>
+    </section>
+
+    <!-- Next Mode Change -->
+    <section class="mode-change">
+      <h2>Next Power Mode Change</h2>
+      <div class="mode-card">
+        <h3>Switching to Grid</h3>
+        <p>At 5:00 PM (in 45 minutes)</p>
+      </div>
+    </section>
+
+    <!-- Recommendations -->
+    <section class="recommendations">
+      <h2>Energy Recommendations</h2>
+      <p>Use high-energy appliances now for lower costs!</p>
+    </section>
+
+    <!-- Manual Mode -->
+    <section class="manual-mode">
+      <h2>Manual Control</h2>
+      <button class="btn solar" onclick="switchMode('solar')">Switch to Solar</button>
+      <button class="btn grid" onclick="switchMode('grid')">Switch to Grid</button>
+    </section>
+
+    <!-- Notifications -->
+    <section class="notifications">
+      <h2>Recent Notifications</h2>
+      <ul id="notifications-list">
+        <li>Switched to Solar at 10:00 AM.</li>
+        <li>Switching to Grid in 15 minutes.</li>
+      </ul>
+    </section>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      loadData();
+    });
+
+    function loadData() {
+      const country = document.getElementById('country-select').value;
+      const today = new Date().toLocaleDateString('en-GB').split('/').reverse().join('-'); // Format: YYYY-MM-DD
+      fetch(`data/${country}.txt`)
+        .then(response => response.text())
+        .then(data => {
+          const lines = data.split('\n').slice(1); // Skip header line
+          const peakHoursContainer = document.getElementById('peak-hours');
+          peakHoursContainer.innerHTML = ''; // Clear previous data
+          lines.forEach(line => {
+            const [date, time, load, isPeak] = line.split('\t');
+            if (date === today) {
+              const hourCard = document.createElement('div');
+              hourCard.className = `hour-card ${isPeak.trim() === 'TRUE' ? 'peak' : ''}`;
+              hourCard.textContent = `${time} - ${load} MW`;
+              peakHoursContainer.appendChild(hourCard);
+            }
+          });
+        })
+        .catch(error => console.error('Error fetching data:', error));
+    }
+
+    function switchMode(mode) {
+      const notificationList = document.getElementById('notifications-list');
+      const now = new Date().toLocaleTimeString();
+
+      if (mode === 'solar') {
+        alert('Switched to Solar Mode');
+        notificationList.innerHTML += `<li>Switched to Solar at ${now}.</li>`;
+      } else if (mode === 'grid') {
+        alert('Switched to Grid Mode');
+        notificationList.innerHTML += `<li>Switched to Grid at ${now}.</li>`;
+      }
+    }
+  </script>
+</body>
+</html>

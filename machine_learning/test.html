@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solar Power Manager</title>
+<style>
+  body {
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background-color: #141414;
+      color: #fff;
+  }
+  .app {
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1c1c1c;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+  .header {
+      text-align: center;
+      border-bottom: 2px solid #e50914;
+      padding-bottom: 20px;
+  }
+  .header h1 {
+      font-size: 28px;
+      color: #e50914;
+  }
+  .header p {
+      font-size: 16px;
+      color: #ccc;
+  }
+  h2 {
+      font-size: 22px;
+      margin-bottom: 10px;
+      color: #e50914;
+  }
+  .power-card {
+      display: flex;
+      align-items: center;
+      background: #333;
+      padding: 15px;
+      border-radius: 10px;
+  }
+  .slider input {
+      width: 100%;
+  }
+  .btn {
+      padding: 12px 20px;
+      background: #e50914;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-right: 10px;
+      font-size: 16px;
+  }
+  .btn.solar {
+      background: #ff9500;
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>☀ Solar Power Manager</h1>
+      <p>Efficient energy control at your fingertips.</p>
+    </header>
+
+    <section class="current-power">
+      <h2>Current Power Source</h2>
+      <div class="power-card">
+        <div class="icon solar"></div>
+        <div class="details">
+          <h3 id="power-mode">Loading...</h3>
+          <p id="power-time">Please wait</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="solar-hours">
+      <h2>Solar Power Availability</h2>
+      <div class="slider">
+        <p>Available from <strong id="solar-start">8 AM</strong> to <strong id="solar-end">4 PM</strong>.</p>
+        <input type="range" id="solar-slider" min="6" max="18" value="12" oninput="updateSolarTime(this.value)">
+        <p>Selected Time: <strong id="selected-time">12 PM</strong></p>
+      </div>
+    </section>
+
+    <section class="mode-change">
+      <h2>Next Power Mode Change</h2>
+      <div class="mode-card">
+        <h3 id="next-mode">Loading...</h3>
+        <p id="next-time">Please wait</p>
+      </div>
+    </section>
+
+    <section class="manual-mode">
+      <h2>Manual Control</h2>
+      <button class="btn solar" onclick="switchMode('solar')">Switch to Solar</button>
+      <button class="btn grid" onclick="switchMode('grid')">Switch to Grid</button>
+    </section>
+
+    <section class="notifications">
+      <h2>Recent Notifications</h2>
+      <ul id="notifications-list"></ul>
+    </section>
+  </div>
+
+  <script>
+    const jsonData = [
+      { "Trigger_Switch": 1, "Time": "10:00 AM", "Next_Mode": "Grid Mode", "Next_Change_Time": "5:00 PM" }
+    ];
+
+    function switchMode(mode) {
+      const notificationList = document.getElementById('notifications-list');
+      const powerMode = document.getElementById('power-mode');
+      const powerTime = document.getElementById('power-time');
+      const now = new Date().toLocaleTimeString();
+
+      if (mode === 'solar') {
+          alert('Switched to Solar Mode');
+          powerMode.textContent = "Solar Mode Active";
+          powerTime.textContent = Since ${now};
+          notificationList.innerHTML += <li>Switched to Solar at ${now}.</li>;
+      } else if (mode === 'grid') {
+          alert('Switched to Grid Mode');
+          powerMode.textContent = "Grid Mode Active";
+          powerTime.textContent = Since ${now};
+          notificationList.innerHTML += <li>Switched to Grid at ${now}.</li>;
+      }
+    }
+
+    function updateSolarTime(value) {
+        let formattedTime = value < 12 ? ${value} AM : (value == 12 ? "12 PM" : ${value - 12} PM);
+        document.getElementById("selected-time").textContent = formattedTime;
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const latestEntry = jsonData[jsonData.length - 1];
+        document.getElementById("power-mode").textContent = latestEntry["Trigger_Switch"] ? "Grid Mode Active" : "Solar Mode Active";
+        document.getElementById("power-time").textContent = Since ${latestEntry["Time"]};
+        document.getElementById("next-mode").textContent = latestEntry["Next_Mode"];
+        document.getElementById("next-time").textContent = At ${latestEntry["Next_Change_Time"]};
+    });
+  </script>
+</body>
+</html>
