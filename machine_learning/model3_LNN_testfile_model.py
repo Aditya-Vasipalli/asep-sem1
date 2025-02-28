@@ -10,7 +10,7 @@ from tensorflow.keras.callbacks import EarlyStopping #type: ignore
 from datetime import datetime, timedelta
 
 # Define the file path
-file_path = 'data/model.xlsx'
+file_path = 'codex\cleaned_Switzerland_Raw_Data.xlsx'
 
 # Check if the file exists
 if not os.path.exists(file_path):
@@ -56,7 +56,7 @@ X_train = scaler.fit_transform(X_train)
 X_val = scaler.transform(X_val)
 X_test = scaler.transform(X_test)
 
-#neural network model still trying to optimise
+# Build the neural network model
 model = Sequential()
 model.add(Input(shape=(X_train.shape[1],)))
 model.add(Dense(128, activation='relu'))
@@ -85,8 +85,20 @@ y_pred = model.predict(X_test)
 # Calculate error metrics
 mse = mean_squared_error(y_test, y_pred)
 mae = mean_absolute_error(y_test, y_pred)
+
+# Function to calculate Mean Absolute Percentage Error (MAPE)
+def mean_absolute_percentage_error(y_true, y_pred):
+    y_true, y_pred = np.array(y_true), np.array(y_pred)
+    return np.mean(np.abs((y_true - y_pred) / y_true)) * 100
+
+# Calculate MAPE and accuracy
+mape = mean_absolute_percentage_error(y_test, y_pred)
+accuracy = 100 - mape
+
 print(f'Test Mean Squared Error: {mse}')
 print(f'Test Mean Absolute Error: {mae}')
+print(f'Test Mean Absolute Percentage Error: {mape}%')
+print(f'Test Accuracy: {accuracy}%')
 
 # Compare predictions with actual data for the current year
 testing_data['Predicted Actual Total Load'] = y_pred
